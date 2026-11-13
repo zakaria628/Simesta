@@ -243,48 +243,45 @@ export default function DataSantri() {
                 </tr>
               </thead>
 
-              <tbody style={{ color: "#334155", opacity: 1 }}>
-                {hasil.map((item, index) => (
-                  <tr 
-                  key={item.id} className="border-b">
-                    <td className="p-3">{index + 1}</td>
-                    <td className="p-3">{item.nis}</td>
-                    <td className="p-3 font-medium">{item.nama}</td>
-                    <td className="p-3">{item.jk}</td>
-                    <td className="p-3">{item.kelas || "-"}</td>
-                    <td className="p-3">{item.kamar || "-"}</td><tr
-  key={item.id}
-  className="border-b"
-  style={{ color: "#334155", opacity: 1 }}
->
-                    <td className="p-3">{item.status}</td>
-                    <td className="p-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => edit(item)}
-                          className="text-blue-600"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => hapus(item.id)}
-                          className="text-red-600"
-                        >
-                          Hapus
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
 
-                {hasil.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="p-8 text-center text-slate-400">
-                      Belum ada data santri. Silakan tambahkan data baru.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+<tbody style={{ color: "#334155", opacity: 1 }}>
+  {hasil.map((item, index) => (
+    <tr key={item.id} className="border-b">
+      <td className="p-3">{index + 1}</td>
+      <td className="p-3">{item.nis}</td>
+      <td className="p-3 font-medium">{item.nama}</td>
+      <td className="p-3">{item.jk}</td>
+      <td className="p-3">{item.kelas || "-"}</td>
+      <td className="p-3">{item.kamar || "-"}</td>
+      <td className="p-3">{item.status}</td>
+      <td className="p-3">
+        <div className="flex gap-2">
+          <button
+            onClick={() => edit(item)}
+            className="text-blue-600"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => hapus(item.id)}
+            className="text-red-600"
+          >
+            Hapus
+          </button>
+        </div>
+      </td>
+    </tr>
+  ))}
+
+  {hasil.length === 0 && (
+    <tr>
+      <td colSpan={8} className="p-8 text-center text-slate-400">
+        Belum ada data santri. Silakan tambahkan data baru.
+      </td>
+    </tr>
+  )}
+</tbody>
+
             </table>
           </div>
 
