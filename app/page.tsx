@@ -1,11 +1,10 @@
 "use client";
 
-export const dynamic = "force-dynamic";
+"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-
 type DashboardStats = {
   totalSantri: number;
   santriAktif: number;
