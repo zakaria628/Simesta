@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+export const dynamic = "force-dynamic";
+
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -14,7 +16,6 @@ type DashboardStats = {
 };
 
 export default function DashboardPage() {
-  const supabase = createSupabaseBrowserClient();
   const [stats, setStats] = useState<DashboardStats>({
     totalSantri: 0,
     santriAktif: 0,
@@ -24,10 +25,12 @@ export default function DashboardPage() {
     pengurusAktif: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [tanggalHariIni, setTanggalHariIni] = useState("");
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     setLoading(true);
     try {
+      const supabase = createSupabaseBrowserClient();
       const [santriRes, pengurusRes] = await Promise.all([
         supabase.from("santri").select("jk, status"),
         supabase.from("pengurus").select("status"),
@@ -71,19 +74,19 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const tanggalHariIni = new Intl.DateTimeFormat("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date());
+  useEffect(() => {
+    setTanggalHariIni(
+      new Intl.DateTimeFormat("id-ID", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(new Date())
+    );
+    fetchStats();
+  }, [fetchStats]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
@@ -98,7 +101,9 @@ export default function DashboardPage() {
               <h1 className="mt-2 text-2xl font-bold tracking-tight md:text-3xl">
                 Dashboard Utama Pesantren
               </h1>
-              <p className="mt-1 text-sm text-emerald-100">{tanggalHariIni}</p>
+              <p className="mt-1 text-sm text-emerald-100">
+                {tanggalHariIni || "Memuat tanggal..."}
+              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
