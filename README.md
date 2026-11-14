@@ -34,3 +34,15 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Data Pengurus
+
+The Pengurus module uses Supabase Auth, Postgres, and a private Storage bucket.
+
+1. Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` using the project's public URL and publishable/anon key. Never put a service-role key in a `NEXT_PUBLIC_` variable.
+2. Before applying the migration, confirm that the remote database does not already contain a `public.pengurus` table or a `pengurus-profile` Storage bucket.
+3. Apply `supabase/migrations/20261114000000_create_pengurus.sql` to the Supabase project.
+4. Disable public sign-ups in Supabase Auth and provision staff accounts yourself; the module intentionally has no public registration. Database access is restricted by RLS to authenticated users.
+5. Restart the Next.js development server after changing environment variables.
+
+The migration creates the `pengurus` table, generated `PGS-` identifiers, RLS policies, and a private profile-photo bucket. Supabase project credentials and live database access are not stored in this repository.

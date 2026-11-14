@@ -1,7 +1,8 @@
-
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type Santri = {
   id: number;
@@ -14,10 +15,15 @@ type Santri = {
 };
 
 export default function DataSantri() {
+  const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
+
   const [data, setData] = useState<Santri[]>([]);
   const [cari, setCari] = useState("");
   const [formBuka, setFormBuka] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     nis: "",
@@ -28,24 +34,80 @@ export default function DataSantri() {
     status: "Aktif",
   });
 
-  function simpan() {
+  // 1. Cek status login & ambil data santri dari Supabase saat halaman dibuka
+  useEffect(() => {
+    async function inisialisasi() {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      setUserEmail(user.email ?? "");
+      await ambilDataSantri();
+      setLoading(false);
+    }
+
+    inisialisasi();
+  }, []);
+
+  async function ambilDataSantri() {
+    const { data: rows, error } = await supabase
+      .from("santri")
+      .select("*")
+      .order("id", { ascending: false });
+
+    if (error) {
+      console.error("Gagal mengambil data santri:", error.message);
+    } else if (rows) {
+      setData(rows as Santri[]);
+    }
+  }
+
+  // 2. Simpan (Tambah baru atau Update ke Supabase)
+  async function simpan() {
     if (!form.nis || !form.nama) {
       alert("NIS dan nama santri wajib diisi!");
       return;
     }
 
     if (editId !== null) {
-      setData((lama) =>
-        lama.map((item) =>
-          item.id === editId ? { ...form, id: editId } : item
-        )
-      );
+      const { error } = await supabase
+        .from("santri")
+        .update({
+          nis: form.nis,
+          nama: form.nama,
+          jk: form.jk,
+          kelas: form.kelas,
+          kamar: form.kamar,
+          status: form.status,
+        })
+        .eq("id", editId);
+
+      if (error) {
+        alert("Gagal memperbarui data: " + error.message);
+        return;
+      }
     } else {
-      setData((lama) => [
-        ...lama,
-        { ...form, id: Date.now() },
+      const { error } = await supabase.from("santri").insert([
+        {
+          nis: form.nis,
+          nama: form.nama,
+          jk: form.jk,
+          kelas: form.kelas,
+          kamar: form.kamar,
+          status: form.status,
+        },
       ]);
+
+      if (error) {
+        alert("Gagal menambah data: " + error.message);
+        return;
+      }
     }
+
+    await ambilDataSantri();
 
     setForm({
       nis: "",
@@ -73,10 +135,22 @@ export default function DataSantri() {
     setFormBuka(true);
   }
 
-  function hapus(id: number) {
+  // 3. Hapus data dari Supabase
+  async function hapus(id: number) {
     if (confirm("Yakin ingin menghapus data santri ini?")) {
-      setData((lama) => lama.filter((item) => item.id !== id));
+      const { error } = await supabase.from("santri").delete().eq("id", id);
+      if (error) {
+        alert("Gagal menghapus data: " + error.message);
+      } else {
+        await ambilDataSantri();
+      }
     }
+  }
+
+  // 4. Logout user
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push("/login");
   }
 
   const hasil = data.filter(
@@ -85,20 +159,40 @@ export default function DataSantri() {
       item.nis.toLowerCase().includes(cari.toLowerCase())
   );
 
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100">
+        <p className="text-slate-600">Memuat data santri...</p>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-100 p-5 md:p-8">
       <div className="mx-auto max-w-7xl">
 
-        <div className="mb-8">
-          <p className="text-sm text-emerald-700">
-            SIMESTA / Manajemen Pesantren
-          </p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">
-            Data Santri
-          </h1>
-          <p className="mt-2 text-slate-500">
-            Kelola data seluruh santri pesantren.
-          </p>
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm text-emerald-700">
+              SIMESTA / Manajemen Pesantren
+            </p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-900">
+              Data Santri
+            </h1>
+            <p className="mt-2 text-slate-500">
+              Kelola data seluruh santri pesantren.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-600">{userEmail}</span>
+            <button
+              onClick={handleLogout}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         <div className="mb-6 grid gap-4 sm:grid-cols-3">
@@ -123,7 +217,6 @@ export default function DataSantri() {
         </div>
 
         <div className="rounded-xl bg-white p-5 shadow-sm">
-
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-bold text-slate-900">Daftar Santri</h2>
 
@@ -155,12 +248,9 @@ export default function DataSantri() {
 
           {formBuka && (
             <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-              <h3
-  className="mb-4 font-bold text-lg"
-  style={{ color: "#111827", opacity: 1 }}
->
-  {editId !== null ? "Edit Data Santri" : "Tambah Santri Baru"}
-</h3>
+              <h3 className="mb-4 text-lg font-bold text-slate-900">
+                {editId !== null ? "Edit Data Santri" : "Tambah Santri Baru"}
+              </h3>
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <input
@@ -180,7 +270,7 @@ export default function DataSantri() {
                 <select
                   value={form.jk}
                   onChange={(e) => setForm({ ...form, jk: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400"
+                  className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900"
                 >
                   <option>Laki-laki</option>
                   <option>Perempuan</option>
@@ -203,7 +293,7 @@ export default function DataSantri() {
                 <select
                   value={form.status}
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400"
+                  className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm text-slate-900"
                 >
                   <option>Aktif</option>
                   <option>Nonaktif</option>
@@ -213,14 +303,14 @@ export default function DataSantri() {
               <div className="mt-5 flex gap-3">
                 <button
                   onClick={simpan}
-                  className="rounded-lg bg-emerald-600 px-5 py-2 text-white"
+                  className="rounded-lg bg-emerald-600 px-5 py-2 text-white hover:bg-emerald-700"
                 >
                   Simpan Data
                 </button>
 
                 <button
                   onClick={() => setFormBuka(false)}
-                  className="rounded-lg bg-slate-300 px-5 py-2 text-slate-800"
+                  className="rounded-lg bg-slate-300 px-5 py-2 text-slate-800 hover:bg-slate-400"
                 >
                   Batal
                 </button>
@@ -243,48 +333,45 @@ export default function DataSantri() {
                 </tr>
               </thead>
 
+              <tbody className="text-slate-700">
+                {hasil.map((item, index) => (
+                  <tr key={item.id} className="border-b">
+                    <td className="p-3">{index + 1}</td>
+                    <td className="p-3">{item.nis}</td>
+                    <td className="p-3 font-medium">{item.nama}</td>
+                    <td className="p-3">{item.jk}</td>
+                    <td className="p-3">{item.kelas || "-"}</td>
+                    <td className="p-3">{item.kamar || "-"}</td>
+                    <td className="p-3">{item.status}</td>
+                    <td className="p-3">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => edit(item)}
+                          className="text-blue-600 hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => hapus(item.id)}
+                          className="text-red-600 hover:underline"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
 
-<tbody style={{ color: "#334155", opacity: 1 }}>
-  {hasil.map((item, index) => (
-    <tr key={item.id} className="border-b">
-      <td className="p-3">{index + 1}</td>
-      <td className="p-3">{item.nis}</td>
-      <td className="p-3 font-medium">{item.nama}</td>
-      <td className="p-3">{item.jk}</td>
-      <td className="p-3">{item.kelas || "-"}</td>
-      <td className="p-3">{item.kamar || "-"}</td>
-      <td className="p-3">{item.status}</td>
-      <td className="p-3">
-        <div className="flex gap-2">
-          <button
-            onClick={() => edit(item)}
-            className="text-blue-600"
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => hapus(item.id)}
-            className="text-red-600"
-          >
-            Hapus
-          </button>
-        </div>
-      </td>
-    </tr>
-  ))}
-
-  {hasil.length === 0 && (
-    <tr>
-      <td colSpan={8} className="p-8 text-center text-slate-400">
-        Belum ada data santri. Silakan tambahkan data baru.
-      </td>
-    </tr>
-  )}
-</tbody>
-
+                {hasil.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-slate-400">
+                      Belum ada data santri. Silakan tambahkan data baru.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
             </table>
           </div>
-
         </div>
       </div>
     </main>
